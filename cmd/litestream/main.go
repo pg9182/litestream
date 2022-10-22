@@ -25,6 +25,7 @@ import (
 	"github.com/benbjohnson/litestream/gs"
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/benbjohnson/litestream/sftp"
+	"github.com/benbjohnson/litestream/webdav"
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v2"
 )
@@ -397,6 +398,10 @@ func NewReplicaFromConfig(c *ReplicaConfig, db *litestream.DB) (_ *litestream.Re
 		if client, err = newSFTPReplicaClientFromConfig(c); err != nil {
 			return nil, err
 		}
+	case "webdav", "webdavs":
+		if client, err = newWebDAVReplicaClientFromConfig(c, typ); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unknown replica type in config: %q", typ)
 	}
@@ -643,6 +648,56 @@ func newSFTPReplicaClientFromConfig(c *ReplicaConfig) (_ *sftp.ReplicaClient, er
 	client.Password = password
 	client.Path = path
 	client.KeyPath = c.KeyPath
+	return client, nil
+}
+
+// newWebDAVReplicaClientFromConfig returns a new instance of webdav.ReplicaClient built from config.
+func newWebDAVReplicaClientFromConfig(c *ReplicaConfig, scheme string) (_ *webdav.ReplicaClient, err error) {
+	// Ensure URL & constituent parts are not both specified.
+	if c.URL != "" && c.Path != "" {
+		return nil, fmt.Errorf("cannot specify url & path for webdav replica")
+	} else if c.URL != "" && c.Host != "" {
+		return nil, fmt.Errorf("cannot specify url & host for webdav replica")
+	}
+
+	host, user, password, path := c.Host, c.User, c.Password, c.Path
+
+	// Apply settings from URL, if specified.
+	if c.URL != "" {
+		u, err := url.Parse(c.URL)
+		if err != nil {
+			return nil, err
+		}
+
+		// Only apply URL parts to field that have not been overridden.
+		if host == "" {
+			host = u.Host
+		}
+		if user == "" && u.User != nil {
+			user = u.User.Username()
+		}
+		if password == "" && u.User != nil {
+			password, _ = u.User.Password()
+		}
+		if path == "" {
+			path = u.Path
+		}
+	}
+
+	// Ensure required settings are set.
+	if host == "" {
+		return nil, fmt.Errorf("host required for webdav replica")
+	} else if user == "" {
+		return nil, fmt.Errorf("user required for webdav replica")
+	}
+
+	// Build replica.
+	client := webdav.NewReplicaClient()
+	client.Scheme = scheme
+	client.Host = host
+	client.User = user
+	client.Password = password
+	client.Path = path
 	return client, nil
 }
 

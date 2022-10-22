@@ -15,6 +15,7 @@ import (
 	"github.com/benbjohnson/litestream/http"
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/benbjohnson/litestream/sftp"
+	"github.com/benbjohnson/litestream/webdav"
 	"github.com/mattn/go-shellwords"
 )
 
@@ -138,6 +139,8 @@ func (c *ReplicateCommand) Run(ctx context.Context) (err error) {
 			case *abs.ReplicaClient:
 				log.Printf("replicating to: name=%q type=%q bucket=%q path=%q endpoint=%q sync-interval=%s", r.Name(), client.Type(), client.Bucket, client.Path, client.Endpoint, r.SyncInterval)
 			case *sftp.ReplicaClient:
+				log.Printf("replicating to: name=%q type=%q host=%q user=%q path=%q sync-interval=%s", r.Name(), client.Type(), client.Host, client.User, client.Path, r.SyncInterval)
+			case *webdav.ReplicaClient:
 				log.Printf("replicating to: name=%q type=%q host=%q user=%q path=%q sync-interval=%s", r.Name(), client.Type(), client.Host, client.User, client.Path, r.SyncInterval)
 			default:
 				log.Printf("replicating to: name=%q type=%q", r.Name(), client.Type())

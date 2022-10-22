@@ -19,6 +19,7 @@ import (
 	"github.com/benbjohnson/litestream/gs"
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/benbjohnson/litestream/sftp"
+	"github.com/benbjohnson/litestream/webdav"
 )
 
 func init() {
@@ -65,6 +66,14 @@ var (
 	sftpKeyPath     = flag.String("sftp-key-path", os.Getenv("LITESTREAM_SFTP_KEY_PATH"), "")
 	sftpHostKeyPath = flag.String("sftp-host-key-path", os.Getenv("LITESTREAM_SFTP_HOST_KEY_PATH"), "")
 	sftpPath        = flag.String("sftp-path", os.Getenv("LITESTREAM_SFTP_PATH"), "")
+)
+
+// WebDAV settings
+var (
+	webdavHost     = flag.String("webdav-host", os.Getenv("LITESTREAM_WEBDAV_HOST"), "")
+	webdavUser     = flag.String("webdav-user", os.Getenv("LITESTREAM_WEBDAV_USER"), "")
+	webdavPassword = flag.String("webdav-password", os.Getenv("LITESTREAM_WEBDAV_PASSWORD"), "")
+	webdavPath     = flag.String("webdav-path", os.Getenv("LITESTREAM_WEBDAV_PATH"), "")
 )
 
 func TestReplicaClient_Generations(t *testing.T) {
@@ -486,6 +495,8 @@ func NewReplicaClient(tb testing.TB, typ string) litestream.ReplicaClient {
 		return NewABSReplicaClient(tb)
 	case sftp.ReplicaClientType:
 		return NewSFTPReplicaClient(tb)
+	case webdav.ReplicaClientType, webdav.ReplicaClientTypeSSL:
+		return NewWebDAVReplicaClient(tb, typ)
 	default:
 		tb.Fatalf("invalid replica client type: %q", typ)
 		return nil
@@ -544,6 +555,19 @@ func NewSFTPReplicaClient(tb testing.TB) *sftp.ReplicaClient {
 	return c
 }
 
+// NewWebDAVReplicaClient returns a new client for integration testing.
+func NewWebDAVReplicaClient(tb testing.TB, scheme string) *webdav.ReplicaClient {
+	tb.Helper()
+
+	c := webdav.NewReplicaClient()
+	c.Scheme = scheme
+	c.Host = *webdavHost
+	c.User = *webdavUser
+	c.Password = *webdavPassword
+	c.Path = path.Join(*webdavPath, fmt.Sprintf("%016x", rand.Uint64()))
+	return c
+}
+
 // MustDeleteAll deletes all objects under the client's path.
 func MustDeleteAll(tb testing.TB, c litestream.ReplicaClient) {
 	tb.Helper()
@@ -563,6 +587,10 @@ func MustDeleteAll(tb testing.TB, c litestream.ReplicaClient) {
 	case *sftp.ReplicaClient:
 		if err := c.Cleanup(context.Background()); err != nil {
 			tb.Fatalf("cannot cleanup sftp: %s", err)
+		}
+	case *webdav.ReplicaClient:
+		if err := c.Cleanup(context.Background()); err != nil {
+			tb.Fatalf("cannot cleanup webdav: %s", err)
 		}
 	}
 }

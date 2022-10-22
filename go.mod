@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/storage v1.24.0
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/aws/aws-sdk-go v1.44.71
+	github.com/emersion/go-webdav v0.3.1
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/googleapis/gax-go/v2 v2.5.1 // indirect
